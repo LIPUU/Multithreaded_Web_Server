@@ -2,7 +2,6 @@ use std::net::TcpStream;
 use std::net::TcpListener;
 use std::io::prelude::*;
 use std::fs;
-use std::fs::read_to_string;
 use std::thread;
 use std::time::Duration;
 use hello::ThreadPool;
@@ -17,7 +16,10 @@ fn main() {
     let pool=ThreadPool::new(4);
 
     // 其实程序一直是阻塞在这里的
-    for stream in listener.incoming() {
+    for stream in listener.incoming().take(2) {
+        // take(2)表明程序只会接收两个请求,两个请求进来之后该循环直接结束,整个程序将进入ThreadPool的实例pool的Drop操作中
+        // 即开始给每个Worker发送Terminate信号,然后等待还没执行完的闭包执行完(join),然后It's all over.
+
         let stream = stream.unwrap();
         // 获取到连接尝试之后,用专用函数对其进行解析. 把"调用解析函数"这一操作用闭包传递给池子来执行,由池子决定何时处理哪个任务.
         // 想要完成这个任务需要进行一些代码上的设计,设计成这样的原因是:
@@ -29,6 +31,8 @@ fn main() {
         });
         // 既然设计了闭包,那就要确定要使用哪种闭包,i.e.给闭包加上一些限定,他们限定的就是闭包的种类.
         // 这些限定包括:FnOnce/Fn/FnMut(三种闭包) , Send/Sync(闭包实现的Trait) , 'static (lifetime) 等
+
+        println!("{}","Shutting down...");
     }
 
     // 对TcpStream的读取需要mut关键字
@@ -39,8 +43,8 @@ fn main() {
         // 如果我们想要把请求搞到String里面去,那么必须用String::from_utf8_lossy
         // &s[..]最终拿到的是&[u8],它把无效的UTF-8序列以�代替,
         // 这样请求就被从buffer搞到
-        let request = String::from_utf8_lossy(&buffer[..]);
-        println!("{}", request);
+        let _request = String::from_utf8_lossy(&buffer[..]);
+        //println!("{}", request);
 
         // 加b直接把&str以&[u8]的形式存储
         let get = b"GET / HTTP/1.1\r\n";
@@ -49,7 +53,7 @@ fn main() {
         let (status_line, filename) = if buffer.starts_with(get) {
             ("HTTP/1.1 200 OK\r\n\r\n", "hello.html")
         } else if buffer.starts_with(sleep) {
-            thread::sleep(Duration::from_secs(5));
+            thread::sleep(Duration::from_secs(3));
             ("HTTP/1.1 200 OK\r\n\r\n", "hello.html")
         } else {
             ("HTTP/1.1 404 NOT FOUND\r\n\r\n", "404.html")
