@@ -50,6 +50,10 @@ impl Drop for ThreadPool {
         // 由于循环的结束,导致不会有stream再去遍历"请求尝试"了,所有在浏览器发出的新请求都会被拒绝,就好像从未有程序监听该端口一样,也就是说,只要开始发送终止信号
         // 就再也不会有新任务能够被发送进来了.
 
+        // 如果没有这个join,则导致main中在for stream in listener.incoming().take(2) 结束时候,主进程立即结束,从而所有线程都立即结束
+        // 如果某些线程还没有把请求执行完毕就被迫结束了,浏览器那里将会立即被中断,这不够优雅.
+        // 而有了本join,配合上上面的Terminate,使得停机非常优雅:不再接受新请求了,但是如果现有的请求还没执行完,那么就把它从Some里面用take取出来并
+        // 等待它执行完毕( join() ).
         println!("{}","Shutting down all workers.");
         for worker in &mut self.workers {
             println!("Shutting down worker {}",worker.id);
@@ -93,7 +97,6 @@ struct Worker {
     // 其中,T是F的返回值.在本例中闭包F的返回值取决于闭包内执行的handle_connection()->()函数,所以最终导致了JoinHandle<()>
     thread: Option<JoinHandle<()>>,
 }
-
 
 
 impl Worker {

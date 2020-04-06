@@ -34,33 +34,33 @@ fn main() {
 
         println!("{}","Shutting down...");
     }
+}
 
-    // 对TcpStream的读取需要mut关键字
-    fn handle_connection(mut stream: TcpStream) {
-        let mut buffer = [0; 512];
-        stream.read(&mut buffer).unwrap();
+// 对TcpStream的读取需要mut关键字
+fn handle_connection(mut stream: TcpStream) {
+    let mut buffer = [0; 512];
+    stream.read(&mut buffer).unwrap();
 
-        // 如果我们想要把请求搞到String里面去,那么必须用String::from_utf8_lossy
-        // &s[..]最终拿到的是&[u8],它把无效的UTF-8序列以�代替,
-        // 这样请求就被从buffer搞到
-        let _request = String::from_utf8_lossy(&buffer[..]);
-        //println!("{}", request);
+    // 如果我们想要把请求搞到String里面去,那么必须用String::from_utf8_lossy
+    // &s[..]最终拿到的是&[u8],它把无效的UTF-8序列以�代替,
+    // 这样请求就被从buffer搞到
+    let _request = String::from_utf8_lossy(&buffer[..]);
+    //println!("{}", request);
 
-        // 加b直接把&str以&[u8]的形式存储
-        let get = b"GET / HTTP/1.1\r\n";
-        let sleep = b"GET /sleep HTTP/1.1\r\n";
+    // 加b直接把&str以&[u8]的形式存储
+    let get = b"GET / HTTP/1.1\r\n";
+    let sleep = b"GET /sleep HTTP/1.1\r\n";
 
-        let (status_line, filename) = if buffer.starts_with(get) {
-            ("HTTP/1.1 200 OK\r\n\r\n", "hello.html")
-        } else if buffer.starts_with(sleep) {
-            thread::sleep(Duration::from_secs(3));
-            ("HTTP/1.1 200 OK\r\n\r\n", "hello.html")
-        } else {
-            ("HTTP/1.1 404 NOT FOUND\r\n\r\n", "404.html")
-        };
-        let contents = fs::read_to_string(filename).unwrap();
-        let response = format!("{}{}", status_line, contents);
-        stream.write(response.as_bytes()).unwrap();
-        stream.flush().unwrap();
-    }
+    let (status_line, filename) = if buffer.starts_with(get) {
+        ("HTTP/1.1 200 OK\r\n\r\n", "hello.html")
+    } else if buffer.starts_with(sleep) {
+        thread::sleep(Duration::from_secs(5));
+        ("HTTP/1.1 200 OK\r\n\r\n", "hello.html")
+    } else {
+        ("HTTP/1.1 404 NOT FOUND\r\n\r\n", "404.html")
+    };
+    let contents = fs::read_to_string(filename).unwrap();
+    let response = format!("{}{}", status_line, contents);
+    stream.write(response.as_bytes()).unwrap();
+    stream.flush().unwrap();
 }
