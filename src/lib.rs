@@ -56,8 +56,8 @@ impl Drop for ThreadPool {
         // 等待它执行完毕( join() ).
         println!("{}","Shutting down all workers.");
         for worker in &mut self.workers {
-            println!("Shutting down worker {}",worker.id);
             if let Some(thread)=worker.thread.take(){
+                println!("对线程{}调用join",worker.id);
                 thread.join().unwrap();
             }
         }

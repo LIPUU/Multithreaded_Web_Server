@@ -13,11 +13,11 @@ fn main() {
     // 遍历的并非"连接",而是"连接尝试".连接也不能够被遍历.
 
     // 启动线程池
-    let pool=ThreadPool::new(4);
+    let pool=ThreadPool::new(2);
 
     // 其实程序一直是阻塞在这里的
     for stream in listener.incoming().take(2) {
-        // take(2)表明程序只会接收两个请求,两个请求进来之后该循环直接结束,整个程序将进入ThreadPool的实例pool的Drop操作中
+        // 为了测试优雅停机,take(2)表明程序只会接收两个请求,两个请求进来之后该循环直接结束,整个程序将进入ThreadPool的实例pool的Drop操作中
         // 即开始给每个Worker发送Terminate信号,然后等待还没执行完的闭包执行完(join),然后It's all over.
 
         let stream = stream.unwrap();
